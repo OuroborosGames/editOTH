@@ -142,7 +142,7 @@ class BasicBuildings(jsl.Document):
 
 def main():
     with open('buildings.jschema', 'w') as f:
-        json.dump(BasicBuildings.get_schema(ordered=True), f) #, indent=4, separators=(',', ': '))
+        json.dump(BasicBuildings.get_schema(ordered=True), f, indent=4, separators=(',', ': '))
     # with open('actions.jschema', 'w') as f:
     #     json.dump(InitialActions.get_schema(ordered=True), f) #, indent=4, separators=(',', ': '))
     # with open('events.jschema', 'w') as f:

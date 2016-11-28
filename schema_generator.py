@@ -4,52 +4,25 @@ import jsl
 from functools import partial
 
 ref = partial(jsl.DocumentField, as_ref=True)
-
-
-# prototypes to avoid compiler butthurt
-# class SpawnImmediately(jsl.Document):
-#     pass
-#
-#
-# class AddEvent(jsl.Document):
-#     pass
-#
-#
-# class SpawnAfterNTurns(jsl.Document):
-#     pass
-#
-#
-# class SpawnNextSeason(jsl.Document):
-#     pass
-#
-#
-# class ModifyState(jsl.Document):
-#     pass
-#
-#
-# class UnlockBuilding(jsl.Document):
-#     pass
-#
-#
-# class UnlockAction(jsl.Document):
-#     pass
+attr_dict = {'health': jsl.IntField(), 'technology': jsl.IntField(), 'safety': jsl.IntField(), 'food': jsl.IntField(),
+             'prestige': jsl.IntField(), 'money': jsl.IntField()}
 
 
 # proper definitions
 class Building(jsl.Document):
     class Options(object):
         title = 'Building'
-    name = jsl.StringField(required=True)
+    building_name = jsl.StringField(required=True)
     description = jsl.StringField()
     base_price = jsl.IntField(required=True)
-    additional_effects = jsl.DictField(additional_properties=True)
-    per_turn_effects = jsl.DictField(additional_properties=True)
+    additional_effects = jsl.DictField(additional_properties=True,properties=attr_dict)
+    per_turn_effects = jsl.DictField(additional_properties=True, properties=attr_dict)
 
 
 class TerrainRestrictedBuilding(Building):
     class Options(object):
         title = 'Terrain Restricted Building'
-    required_tile = jsl.StringField(required=True)
+    required_tile = jsl.StringField(required=True, enum=["Water", "Grass", "Forest", "Hills", "Mountains"])
 
 
 class CustomBuilding(Building):
@@ -58,95 +31,144 @@ class CustomBuilding(Building):
     build_predicate = jsl.StringField(required=True)
 
 
-# class Predicate(jsl.Document):
-#     predicate = jsl.StringField(
-#         pattern="/^(counter_greater|counter_lower|counter_equal|attr_greater|attr_lower|attr_equal)$/",
-#         required=True)
-#     key = jsl.StringField(required=True)
-#     value = jsl.IntField(required=True)
-#
-#
-# class ActionToTake(jsl.Document):
-#     name = jsl.StringField(required=True)
-#     effect = jsl.OneOfField([ref(SpawnImmediately), ref(AddEvent), ref(SpawnAfterNTurns), ref(SpawnNextSeason),
-#                             ref(ModifyState), ref(UnlockBuilding), ref(UnlockAction)])
-#
-#
-# class TextEvent(jsl.Document):
-#     title = jsl.StringField(required=True)
-#     description = jsl.StringField()
-#     actions = jsl.ArrayField(items=[ref(ActionToTake)])
-#
-#
-# class UnlockableEvent(TextEvent):
-#     unlock_predicate = ref(Predicate, required=True)
-#
-#
-# class ConditionalEvent(TextEvent):
-#     condition = ref(Predicate, required=True)
-#
-#
-# class SpawnImmediately(jsl.Document):
-#     event = jsl.OneOfField([ref(TextEvent), ref(UnlockableEvent), ref(ConditionalEvent)], required=True)
-#
-#
-# class AddEvent(SpawnImmediately):
-#     active = jsl.BooleanField(required=True)
-#
-#
-# class SpawnAfterNTurns(SpawnImmediately):
-#     turns = jsl.IntField()
-#
-#
-# class SpawnNextSeason(SpawnImmediately):
-#     season = jsl.IntField(minimum=0, maximum=3)
-#
-#
-# class ModifyState(jsl.Document):
-#     attributes = jsl.DictField()
-#
-#
-# class UnlockBuilding(jsl.Document):
-#     building = jsl.OneOfField([ref(Building), ref(TerrainRestrictedBuilding), ref(CustomBuilding)])
-#
-#
-# class SpecialAction(jsl.Document):
-#     name = jsl.StringField(required=True)
-#     description = jsl.StringField()
-#     event = jsl.OneOfField([ref(TextEvent), ref(UnlockableEvent), ref(ConditionalEvent)], required=True)
-#
-#
-# class LimitedAction(SpecialAction):
-#     limit = jsl.IntField(required=True)
-#
-#
-# class UnlockAction(jsl.Document):
-#     action = jsl.OneOfField([ref(SpecialAction), ref(LimitedAction)])
-#
-#
+# this is a setup for a reallly awful hack
+class IndirectActionToTake(jsl.Document):
+    pass
+
+
+class IndirectTextEvent(jsl.Document):
+    pass
+
+
+class IndirectUnlockableEvent(jsl.Document):
+    pass
+
+
+class IndirectConditionalEvent(jsl.Document):
+    pass
+
+
+class Predicate(jsl.Document):
+    predicate = jsl.StringField(
+        enum=["counter_greater", "counter_lower", "counter_equal", "attr_greater", "attr_lower", "attr_equal"],
+        required=True)
+    key = jsl.StringField(required=True)
+    value = jsl.IntField(required=True)
+
+
+class SpawnImmediately(jsl.Document):
+    class Options(object):
+        title = 'Spawn event'
+    event = jsl.OneOfField([ref(IndirectTextEvent), ref(IndirectUnlockableEvent), ref(IndirectConditionalEvent)],
+                           required=True)
+
+
+class AddEvent(SpawnImmediately):
+    class Options(object):
+        title = 'Add random event'
+    active = jsl.BooleanField(required=True)
+
+
+class SpawnAfterNTurns(SpawnImmediately):
+    class Options(object):
+        title = 'Spawn an event after a number of turns'
+    turns = jsl.IntField()
+
+
+class SpawnNextSeason(SpawnImmediately):
+    class Options(object):
+        title = 'Spawn an event during a chosen season'
+    season = jsl.IntField(minimum=0, maximum=3)
+
+
+class ModifyState(jsl.Document):
+    class Options(object):
+        title = 'Increase/decrease stats'
+    attributes = jsl.DictField(properties=attr_dict)
+
+
+class UnlockBuilding(jsl.Document):
+    class Options(object):
+        title = 'Unlock a new building'
+    building = jsl.OneOfField([ref(Building), ref(TerrainRestrictedBuilding), ref(CustomBuilding)])
+
+
+class SpecialAction(jsl.Document):
+    name = jsl.StringField(required=True)
+    description = jsl.StringField()
+    event = jsl.OneOfField([ref(IndirectTextEvent), ref(IndirectUnlockableEvent), ref(IndirectConditionalEvent)],
+                           required=True)
+
+
+class LimitedAction(SpecialAction):
+    limit = jsl.IntField(required=True)
+
+
+class UnlockAction(jsl.Document):
+    class Options(object):
+        title = 'Unlock a special action'
+    action = jsl.OneOfField([ref(SpecialAction), ref(LimitedAction)])
+
+
+class ActionToTake(jsl.Document):
+    name = jsl.StringField(required=True)
+    effect = jsl.OneOfField([ref(SpawnImmediately), ref(AddEvent), ref(SpawnAfterNTurns), ref(SpawnNextSeason),
+                            ref(ModifyState), ref(UnlockBuilding), ref(UnlockAction)])
+
+
+class TextEvent(jsl.Document):
+    class Options(object):
+        title = 'Basic text event'
+    event_title = jsl.StringField(required=True)
+    description = jsl.StringField()
+    actions = jsl.ArrayField(items=[ref(ActionToTake)])
+
+
+class UnlockableEvent(TextEvent):
+    class Options(object):
+        title = 'Unlockable event'
+    unlock_predicate = ref(Predicate, required=True)
+
+
+class ConditionalEvent(TextEvent):
+    class Options(object):
+        title = 'Conditional Event'
+    condition = ref(Predicate, required=True)
+
+
 class BasicBuildings(jsl.Document):
     class Options(object):
         title = 'Basic Buildings'
-    content = jsl.ArrayField(items=jsl.OneOfField([jsl.DocumentField(Building),
-                                                   jsl.DocumentField(TerrainRestrictedBuilding),
-                                                   jsl.DocumentField(CustomBuilding)]))
+    buildings = jsl.ArrayField(items=jsl.OneOfField([jsl.DocumentField(Building),
+                                                     jsl.DocumentField(TerrainRestrictedBuilding),
+                                                     jsl.DocumentField(CustomBuilding)]))
 
+
+class Events(jsl.Document):
+    class Options(object):
+        title = 'Text-based events'
+    events = jsl.ArrayField(items=jsl.OneOfField([jsl.DocumentField(TextEvent), jsl.DocumentField(UnlockableEvent),
+                                                  jsl.DocumentField(ConditionalEvent)]))
 
 # class InitialActions(jsl.Document):
 #     content = jsl.ArrayField(items=jsl.OneOfField([ref(SpecialAction), ref(LimitedAction)]))
-#
-#
-# class Events(jsl.Document):
-#     content = jsl.ArrayField(items=jsl.OneOfField([ref(TextEvent), ref(UnlockableEvent), ref(ConditionalEvent)]))
 
+
+class Content(jsl.Document):
+    class Options(object):
+        title = 'Game contents'
+    contents = jsl.ArrayField(items=jsl.OneOfField([ref(TextEvent), ref(UnlockableEvent), ref(ConditionalEvent),
+                                                    ref(Building), ref(TerrainRestrictedBuilding),
+                                                    ref(CustomBuilding)]))
 
 def main():
-    with open('buildings.jschema', 'w') as f:
-        json.dump(BasicBuildings.get_schema(ordered=True), f, indent=4, separators=(',', ': '))
-    # with open('actions.jschema', 'w') as f:
-    #     json.dump(InitialActions.get_schema(ordered=True), f) #, indent=4, separators=(',', ': '))
-    # with open('events.jschema', 'w') as f:
-    #     json.dump(Events.get_schema(ordered=True), f) #, indent=4, separators=(',', ': '))
+    schema = Content.get_schema(ordered=True)
+    # a horrible hack for getting circular indirect references to work
+    for d in list(schema['definitions'].keys()):
+        if 'Indirect' in d:
+            del schema['definitions'][d]
+    with open("content.jschema", 'w') as f:
+        f.write(json.dumps(schema).replace("Indirect", ""))
 
 if __name__ == "__main__":
     main()

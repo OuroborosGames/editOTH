@@ -1,5 +1,8 @@
-import json
+"""This script creates a JSON schema defining the data files for On The Hill. It then generates an HTML file
+with a JSON editor based on this schema. The editor itself is not our work - it was created by Jeremy Dorn
+(https://github.com/jdorn/json-editor/)."""
 
+import json
 import jsl
 from functools import partial
 
@@ -59,7 +62,7 @@ class Predicate(jsl.Document):
 class SpawnImmediately(jsl.Document):
     class Options(object):
         title = 'Spawn event'
-    event = jsl.OneOfField([ref(IndirectTextEvent), ref(IndirectUnlockableEvent), ref(IndirectConditionalEvent)],
+    event_to_create = jsl.OneOfField([ref(IndirectTextEvent), ref(IndirectUnlockableEvent), ref(IndirectConditionalEvent)],
                            required=True)
 
 
@@ -84,13 +87,13 @@ class SpawnNextSeason(SpawnImmediately):
 class ModifyState(jsl.Document):
     class Options(object):
         title = 'Increase/decrease stats'
-    attributes = jsl.DictField(properties=attr_dict)
+    attributes_to_apply = jsl.DictField(properties=attr_dict)
 
 
 class UnlockBuilding(jsl.Document):
     class Options(object):
         title = 'Unlock a new building'
-    building = jsl.OneOfField([ref(Building), ref(TerrainRestrictedBuilding), ref(CustomBuilding)])
+    building_to_unlock = jsl.OneOfField([ref(Building), ref(TerrainRestrictedBuilding), ref(CustomBuilding)])
 
 
 class SpecialAction(jsl.Document):
@@ -111,13 +114,18 @@ class LimitedAction(SpecialAction):
 class UnlockAction(jsl.Document):
     class Options(object):
         title = 'Unlock a special action'
-    action = jsl.OneOfField([ref(SpecialAction), ref(LimitedAction)])
+    action_to_unlock = jsl.OneOfField([ref(SpecialAction), ref(LimitedAction)])
+
+
+class DoNothing(jsl.Document):
+    class Options(object):
+        title = 'No effect'
 
 
 class ActionToTake(jsl.Document):
     name = jsl.StringField(required=True)
     effect = jsl.OneOfField([ref(SpawnImmediately), ref(AddEvent), ref(SpawnAfterNTurns), ref(SpawnNextSeason),
-                            ref(ModifyState), ref(UnlockBuilding), ref(UnlockAction)])
+                            ref(ModifyState), ref(UnlockBuilding), ref(UnlockAction), ref(DoNothing)])
 
 
 class TextEvent(jsl.Document):
@@ -172,8 +180,10 @@ def main():
         if 'Indirect' in d:
             del schema['definitions'][d]
     with open("editor.html", 'w') as f:
+        f.write("<!-- THIS DOCUMENT WAS GENERATED AUTOMATICALLY -->")
         f.write(
-            "<html><head><title>On The Hill content editor</title><script src=\"jsoneditor.js\"></script></head>")
+            "<html><head><title>On The Hill content editor</title><script src=\"jsoneditor.js\"></script>")
+        f.write("<style type = \"text/css\">body {background-color:#808080}</style></head>")
         f.write("<body><div id = \'editor_holder\'></div><script>")
         f.write("var editor = new JSONEditor(document.getElementById(\'editor_holder\'), {schema: ")
         f.write(json.dumps(schema).replace("Indirect", ""))

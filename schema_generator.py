@@ -94,6 +94,8 @@ class UnlockBuilding(jsl.Document):
 
 
 class SpecialAction(jsl.Document):
+    class Options(object):
+        title = 'Special action'
     name = jsl.StringField(required=True)
     description = jsl.StringField()
     event = jsl.OneOfField([ref(IndirectTextEvent), ref(IndirectUnlockableEvent), ref(IndirectConditionalEvent)],
@@ -101,6 +103,8 @@ class SpecialAction(jsl.Document):
 
 
 class LimitedAction(SpecialAction):
+    class Options(object):
+        title = 'Limited special action'
     limit = jsl.IntField(required=True)
 
 
@@ -167,8 +171,13 @@ def main():
     for d in list(schema['definitions'].keys()):
         if 'Indirect' in d:
             del schema['definitions'][d]
-    with open("content.jschema", 'w') as f:
+    with open("editor.html", 'w') as f:
+        f.write(
+            "<html><head><title>On The Hill content editor</title><script src=\"jsoneditor.js\"></script></head>")
+        f.write("<body><div id = \'editor_holder\'></div><script>")
+        f.write("var editor = new JSONEditor(document.getElementById(\'editor_holder\'), {schema: ")
         f.write(json.dumps(schema).replace("Indirect", ""))
+        f.write("});</script></body></html>")
 
 if __name__ == "__main__":
     main()
